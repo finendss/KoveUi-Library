@@ -23,7 +23,7 @@ local WIN_W, WIN_H = 420, 340
 local TITLE_H, TOUCH_MIN = 40, 36
 local SIDEBAR_W, ARROW_Y = 110, 10
 
--- 修改了 new 函数，强制清空 TextButton 的默认文本
+-- 强制清空 TextButton 默认文本
 local function new(class, props)
     local o = Instance.new(class)
     if class == "TextButton" then
@@ -33,7 +33,6 @@ local function new(class, props)
     for k, v in pairs(props) do o[k] = v end
     return o
 end
-
 local function corner(p, r)
     return new("UICorner", { CornerRadius = UDim.new(0, r or 8), Parent = p })
 end
@@ -49,9 +48,9 @@ local function tween(o, t, props)
     return tw
 end
 
--- ============ 图标加载 ============
+-- ============ 图标加载与回调 ============
 local iconModule, iconCache = nil, {}
-local iconReadyCallback = nil
+local iconCallbacks = {}
 
 task.spawn(function()
     local ok, wind = pcall(function() return _G.WindUI or WindUI end)
@@ -66,7 +65,9 @@ task.spawn(function()
             iconModule = mod
         end)
     end
-    if iconReadyCallback then task.spawn(iconReadyCallback) end
+    for _, cb in ipairs(iconCallbacks) do
+        task.spawn(cb)
+    end
 end)
 
 function KovaUI:GetIcon(name)
@@ -94,6 +95,10 @@ function KovaUI:GetIcon(name)
         end
     end
     return nil
+end
+
+function KovaUI:OnIconReady(cb)
+    if iconModule then task.spawn(cb) else table.insert(iconCallbacks, cb) end
 end
 
 -- ============ 核心环境 ============
@@ -302,7 +307,7 @@ function KovaUI:CreateWindow(config)
         if aA then arrowIcon.Image = aA.Image; arrowIcon.ImageRectSize = aA.RectSize; arrowIcon.ImageRectOffset = aA.RectPos end
     end
     updateIcons()
-    iconReadyCallback = updateIcons
+    self:OnIconReady(updateIcons)
 
     closeBtn.MouseEnter:Connect(function() tween(xIcon, 0.1, { ImageColor3 = Theme.Accent2 }) end)
     closeBtn.MouseLeave:Connect(function() tween(xIcon, 0.1, { ImageColor3 = Theme.White }) end)
@@ -407,7 +412,7 @@ function KovaUI:CreateWindow(config)
     local Window = {}
     local pages, tabButtons = {}, {}
     local activePage = nil
-    local tabCount = 0 -- 修复重叠 Bug 的关键：增加独立计数器
+    local tabCount = 0
 
     function Window:Tab(tConfig)
         local name = tConfig.Title or "Tab"
@@ -439,7 +444,7 @@ function KovaUI:CreateWindow(config)
             if btnObj.text then tween(btnObj.text, 0.12, { TextTransparency = target }) end
         end
 
-        -- 创建侧栏按钮 (已清空 Text 并修复重叠)
+        -- 创建侧栏按钮 (修复了缺少方法和重叠的 Bug)
         local btn = new("TextButton", { Size = UDim2.new(1, 0, 0, 34), LayoutOrder = order, BackgroundTransparency = 1, Text = "", ZIndex = 3, Parent = sidebar })
         local img = new("ImageLabel", { Position = UDim2.new(0, 6, 0.5, 0), AnchorPoint = Vector2.new(0, 0.5), Size = UDim2.new(0, 16, 0, 16), BackgroundTransparency = 1, ImageColor3 = Theme.White, ImageTransparency = 0.5, ZIndex = 4, Parent = btn })
         local txt = new("TextLabel", { Position = UDim2.new(0, 30, 0, 0), Size = UDim2.new(1, -30, 1, 0), BackgroundTransparency = 1, Font = Enum.Font.GothamMedium, TextSize = 13, TextColor3 = Theme.White, TextTransparency = 0.5, TextXAlignment = Enum.TextXAlignment.Left, Text = name, ZIndex = 4, Parent = btn })
@@ -447,8 +452,12 @@ function KovaUI:CreateWindow(config)
         local btnObj = { btn = btn, icon = img, text = txt }
         tabButtons[name] = btnObj
 
-        local iA = self:GetIcon(iconName)
-        if iA then img.Image = iA.Image; img.ImageRectSize = iA.RectSize; img.ImageRectOffset = iA.RectPos end
+        local function updateTabIcon()
+            local iA = KovaUI:GetIcon(iconName)
+            if iA then img.Image = iA.Image; img.ImageRectSize = iA.RectSize; img.ImageRectOffset = iA.RectPos end
+        end
+        updateTabIcon()
+        KovaUI:OnIconReady(updateTabIcon)
 
         btn.MouseEnter:Connect(function() if activePage ~= name then applyState(btnObj, false, true) end end)
         btn.MouseLeave:Connect(function() if activePage ~= name then applyState(btnObj, false, false) end end)
