@@ -16,14 +16,13 @@ local Theme = {
     Accent  = Color3.fromRGB(120, 90, 255),
     Accent2 = Color3.fromRGB(70, 200, 255),
     White   = Color3.fromRGB(255, 255, 255),
-    Stroke  = Color3.fromRGB(55, 55, 70),
+    Stroke  = Color3.fromRGB(65, 65, 80), -- 稍微提亮了边框颜色，让控件更明显
 }
 
 local WIN_W, WIN_H = 420, 340
 local TITLE_H, TOUCH_MIN = 40, 36
 local SIDEBAR_W, ARROW_Y = 110, 10
 
--- 【核心修复】：只清空文字，不再强行设置背景透明
 local function new(class, props)
     local o = Instance.new(class)
     if class == "TextButton" then
@@ -287,7 +286,6 @@ function KovaUI:CreateWindow(config)
     new("TextLabel", { Position = UDim2.new(0, 38, 0.5, -7), AnchorPoint = Vector2.new(0, 0.5), Size = UDim2.new(1, -100, 0, 14), BackgroundTransparency = 1, Font = Enum.Font.GothamBold, TextSize = 13, TextColor3 = Theme.White, TextXAlignment = Enum.TextXAlignment.Left, Text = titleText, ZIndex = 3, Parent = titleBar })
     new("TextLabel", { Position = UDim2.new(0, 38, 0.5, 7), AnchorPoint = Vector2.new(0, 0.5), Size = UDim2.new(1, -100, 0, 12), BackgroundTransparency = 1, Font = Enum.Font.Gotham, TextSize = 10, TextColor3 = Theme.White, TextTransparency = 0.4, TextXAlignment = Enum.TextXAlignment.Left, Text = authorText, ZIndex = 3, Parent = titleBar })
 
-    -- 显式设置无背景透明
     local maxBtn = new("TextButton", { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -42, 0.5, 0), Size = UDim2.new(0, 28, 0, 28), BackgroundTransparency = 1, ZIndex = 3, Parent = titleBar })
     local maxIcon = new("ImageLabel", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.5, 0), Size = UDim2.new(0, 16, 0, 16), BackgroundTransparency = 1, ImageColor3 = Theme.White, ImageTransparency = 0.4, ScaleType = Enum.ScaleType.Fit, ZIndex = 4, Parent = maxBtn })
     
@@ -343,7 +341,7 @@ function KovaUI:CreateWindow(config)
         if mA then maxIcon.Image = mA.Image; maxIcon.ImageRectSize = mA.RectSize; maxIcon.ImageRectOffset = mA.RectPos end
     end)
 
-    -- 确认弹窗 (修改面板背景为 Theme.Panel，增强视觉隔离)
+    -- 确认弹窗 (调整透明度，避免全黑)
     local modalOverlay = new("TextButton", { Size = UDim2.new(1, 0, 1, 0), BackgroundColor3 = Color3.new(0,0,0), BackgroundTransparency = 1, Visible = false, ClipsDescendants = true, ZIndex = 1000, Parent = main })
     corner(modalOverlay, 14)
     local modalPanel = new("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.5, 0), Size = UDim2.new(0, 240, 0, 120), BackgroundColor3 = Theme.Panel, ZIndex = 1001, Parent = modalOverlay })
@@ -353,14 +351,14 @@ function KovaUI:CreateWindow(config)
     
     local btnRow = new("Frame", { Size = UDim2.new(1, -30, 0, 32), Position = UDim2.new(0, 15, 1, -44), BackgroundTransparency = 1, ZIndex = 1002, Parent = modalPanel })
     
-    -- 显式给确认框里的按钮加上背景
     local btnC = new("TextButton", { Size = UDim2.new(0, 80, 1, 0), BackgroundColor3 = Theme.Row, BackgroundTransparency = 0, Font = Enum.Font.GothamMedium, TextSize = 12, TextColor3 = Theme.White, Text = "取消", ZIndex = 1003, Parent = btnRow })
-    corner(btnC, 8); btnC.MouseEnter:Connect(function() tween(btnC, 0.15, { BackgroundColor3 = Theme.RowHover }) end); btnC.MouseLeave:Connect(function() tween(btnC, 0.15, { BackgroundColor3 = Theme.Row }) end)
+    corner(btnC, 8); stroke(btnC, Theme.Stroke, 1); btnC.MouseEnter:Connect(function() tween(btnC, 0.15, { BackgroundColor3 = Theme.RowHover }) end); btnC.MouseLeave:Connect(function() tween(btnC, 0.15, { BackgroundColor3 = Theme.Row }) end)
     
     local btnOk = new("TextButton", { Size = UDim2.new(0, 80, 1, 0), Position = UDim2.new(1, -80, 0, 0), BackgroundColor3 = Theme.Accent, BackgroundTransparency = 0, Font = Enum.Font.GothamMedium, TextSize = 12, TextColor3 = Theme.White, Text = "确定", ZIndex = 1003, Parent = btnRow })
-    corner(btnOk, 8); btnOk.MouseEnter:Connect(function() tween(btnOk, 0.15, { BackgroundColor3 = Theme.Accent2 }) end); btnOk.MouseLeave:Connect(function() tween(btnOk, 0.15, { BackgroundColor3 = Theme.Accent }) end)
+    corner(btnOk, 8); stroke(btnOk, Theme.Stroke, 1); btnOk.MouseEnter:Connect(function() tween(btnOk, 0.15, { BackgroundColor3 = Theme.Accent2 }) end); btnOk.MouseLeave:Connect(function() tween(btnOk, 0.15, { BackgroundColor3 = Theme.Accent }) end)
 
-    local function showModal() modalOverlay.Visible = true; modalScale.Scale = 0.85; tween(modalOverlay, 0.15, { BackgroundTransparency = 0.4 }); tween(modalScale, 0.15, { Scale = 1 }) end
+    -- 透明度改为0.2，这样背景不会全黑，能看到底下的控件轮廓
+    local function showModal() modalOverlay.Visible = true; modalScale.Scale = 0.85; tween(modalOverlay, 0.15, { BackgroundTransparency = 0.2 }); tween(modalScale, 0.15, { Scale = 1 }) end
     local function hideModal() local tw = tween(modalOverlay, 0.15, { BackgroundTransparency = 1 }); tween(modalScale, 0.15, { Scale = 0.85 }); tw.Completed:Connect(function() modalOverlay.Visible = false end) end
     btnC.Activated:Connect(hideModal); btnOk.Activated:Connect(function() gui:Destroy() end)
     closeBtn.Activated:Connect(showModal)
@@ -489,9 +487,11 @@ function KovaUI:CreateWindow(config)
             local title = config.Title or "Toggle"
             local default = config.Value or false
             local callback = config.Callback
-            -- 显式加回背景，不再被强制透明
+            -- 加上 UIStroke 让背景框可见
             local row = new("TextButton", { Size = UDim2.new(1, 0, 0, TOUCH_MIN), BackgroundColor3 = Theme.Bg, BackgroundTransparency = 0, ZIndex = 3, Parent = getParent(config.Side) })
             corner(row, 8)
+            stroke(row, Theme.Stroke, 1) 
+            
             new("TextLabel", { Position = UDim2.new(0, 10, 0, 0), Size = UDim2.new(1, -56, 1, 0), BackgroundTransparency = 1, Font = Enum.Font.GothamMedium, TextSize = 12, TextColor3 = Theme.White, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Text = title, ZIndex = 4, Parent = row })
             local switch = new("Frame", { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -8, 0.5, 0), Size = UDim2.new(0, 36, 0, 20), BackgroundColor3 = Theme.Bg, ZIndex = 4, Parent = row })
             corner(switch, 10); stroke(switch, Theme.Stroke, 1)
@@ -509,8 +509,11 @@ function KovaUI:CreateWindow(config)
         end
 
         function Tab:Button(config)
+            -- 加上 UIStroke 让背景框可见
             local btn = new("TextButton", { Size = UDim2.new(1, 0, 0, TOUCH_MIN), BackgroundColor3 = Theme.Bg, BackgroundTransparency = 0, Font = Enum.Font.GothamMedium, TextSize = 12, TextColor3 = Theme.White, Text = config.Title or "Button", ZIndex = 3, Parent = getParent(config.Side) })
             corner(btn, 8)
+            stroke(btn, Theme.Stroke, 1)
+            
             btn.MouseEnter:Connect(function() tween(btn, 0.15, { BackgroundColor3 = Theme.Accent }) end)
             btn.MouseLeave:Connect(function() tween(btn, 0.15, { BackgroundColor3 = Theme.Bg }) end)
             btn.Activated:Connect(function() if config.Callback then pcall(config.Callback) end end)
@@ -519,6 +522,8 @@ function KovaUI:CreateWindow(config)
         function Tab:Input(config)
             local wrap = new("Frame", { Size = UDim2.new(1, 0, 0, TOUCH_MIN), BackgroundColor3 = Theme.Bg, ZIndex = 3, Parent = getParent(config.Side) })
             corner(wrap, 8)
+            stroke(wrap, Theme.Stroke, 1)
+            
             local box = new("TextBox", { Size = UDim2.new(1, -16, 1, 0), Position = UDim2.new(0, 8, 0, 0), BackgroundTransparency = 1, Font = Enum.Font.Gotham, TextSize = 12, TextColor3 = Theme.White, PlaceholderText = config.Placeholder or "输入...", PlaceholderColor3 = Theme.White, Text = config.Default or "", ClearTextOnFocus = false, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 4, Parent = wrap })
             box.FocusLost:Connect(function(enter) if enter and config.Callback then pcall(config.Callback, box.Text) end end)
         end
